@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Analysis History{% endblock %}
+{% block content %}
+<div class="dash-layout">
+    <aside class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-label">Navigation</div>
+            <a href="{{ url_for('user_dashboard') }}" class="sidebar-link" id="sidebarDash"><i
+                    class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="{{ url_for('upload') }}" class="sidebar-link" id="sidebarUpload"><i class="fas fa-upload"></i>
+                Upload Video</a>
+            <a href="{{ url_for('history') }}" class="sidebar-link active" id="sidebarHist"><i
+                    class="fas fa-history"></i> Analysis History</a>
+        </div>
+    </aside>
+    <div class="dash-main">
+        <div class="page-header">
+            <div>
+                <div class="page-header-title"><i class="fas fa-history" style="color:var(--yellow-500);"></i> Analysis
+                    History</div>
+                <div class="page-header-sub">All {{ analyses|length }} video analyses — sorted by most recent</div>
+            </div>
+            <a href="{{ url_for('upload') }}" class="btn btn-primary" id="histNewBtn"><i class="fas fa-plus"></i> New
+                Analysis</a>
+        </div>
+
+        <!-- SEARCH BAR -->
+        <div
+            style="background:#fff;border-radius:var(--radius);padding:0.75rem 1rem;border:1px solid rgba(255,214,0,0.2);margin-bottom:1.5rem;display:flex;gap:1rem;align-items:center;">
+            <i class="fas fa-search" style="color:#bbb;"></i>
+            <input type="text" id="histSearch" placeholder="Search by filename or prediction..." class="form-control"
+                style="border:none;background:transparent;padding:0;box-shadow:none;">
+            <select id="filterPred" class="form-control" style="width:auto;padding:4px 12px;font-size:0.85rem;">
+                <option value="">All Predictions</option>
+                <option value="Normal">Normal</option>
+                <option value="High CP Risk">High CP Risk</option>
+                <option value="Moderate Risk">Moderate Risk</option>
+            </select>
+        </div>
+
+        <div class="table-card">
+            <div class="table-card-header">
+                <div class="table-card-title"><i class="fas fa-list"></i> All Analyses</div>
+                <span style="color:var(--text-muted);font-size:0.85rem;" id="rowCount">{{ analyses|length }}
+                    records</span>
+            </div>
+            <div class="table-wrap">
+                {% if analyses %}
+                <table id="histTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Video File</th>
+                            <th>Prediction</th>
+                            <th>Risk Score</th>
+                            <th>Accuracy</th>
+                            <th>Sensitivity</th>
+                            <th>F1 Score</th>
+                            <th>Frames</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in analyses %}
+                        <tr class="hist-row" data-pred="{{ a.prediction }}" data-name="{{ a.original_name }}">
+                            <td style="color:var(--text-muted);font-size:0.82rem;">{{ loop.index }}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <i class="fas fa-file-video" style="color:var(--yellow-600);"></i>
+                                    <div>
+                                        <div style="font-weight:500;font-size:0.88rem;">{{ a.original_name }}</div>
+                                        <div style="font-size:0.75rem;color:var(--text-muted);">Confidence: {{
+                                            (a.confidence*100)|round(1) }}%</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if a.prediction == 'Normal' %}
+                                <span class="badge badge-success"><i class="fas fa-check"></i> Normal</span>
+                                {% elif a.prediction == 'High CP Risk' %}
+                                <span class="badge badge-danger"><i class="fas fa-exclamation"></i> High CP Risk</span>
+                                {% else %}
+                                <span class="badge badge-warning"><i class="fas fa-minus"></i> Moderate</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div class="progress" style="width:50px;">
+                                        <div class="progress-bar"
+                                            style="width:{{ (a.risk_score*100)|int }}%;background:{% if a.risk_score > 0.6 %}var(--danger){% elif a.risk_score > 0.4 %}var(--warning){% else %}var(--success){% endif %};">
+                                        </div>
+                                    </div>
+                                    <span style="font-size:0.85rem;font-weight:600;">{{ (a.risk_score*100)|round(1)
+                                        }}%</span>
+                                </div>
+                            </td>
+                            <td><strong>{{ (a.accuracy*100)|round(1) }}%</strong></td>
+                            <td>{{ (a.sensitivity*100)|round(1) }}%</td>
+                            <td>{{ (a.f1_score*100)|round(1) }}%</td>
+                            <td style="color:var(--text-muted);">{{ a.frames_analyzed }}</td>
+                            <td style="color:var(--text-muted);">{{ a.created_at[:10] }}</td>
+                            <td>
+                                <div style="display:flex;gap:6px;">
+                                    <a href="{{ url_for('result', analysis_id=a.id) }}" class="btn btn-primary btn-sm"
+                                        id="resultBtn{{ a.id }}"><i class="fas fa-eye"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div style="text-align:center;padding:3rem;color:var(--text-muted);">
+                    <i class="fas fa-film" style="font-size:3rem;color:#ddd;margin-bottom:1rem;display:block;"></i>
+                    No analyses found. <a href="{{ url_for('upload') }}" style="color:var(--yellow-700);">Upload your
+                        first video</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const searchInput = document.getElementById('histSearch');
+    const filterPred = document.getElementById('filterPred');
+    const rows = document.querySelectorAll('.hist-row');
+    const rowCount = document.getElementById('rowCount');
+
+    function filterTable() {
+        const q = searchInput.value.toLowerCase();
+        const pred = filterPred.value;
+        let visible = 0;
+        rows.forEach(r => {
+            const nameMatch = r.dataset.name.toLowerCase().includes(q);
+            const predMatch = !pred || r.dataset.pred === pred;
+            const show = nameMatch && predMatch;
+            r.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        rowCount.textContent = visible + ' records';
+    }
+    searchInput.addEventListener('input', filterTable);
+    filterPred.addEventListener('change', filterTable);
+</script>
+{% endblock %}

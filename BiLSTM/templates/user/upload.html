@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Upload Video{% endblock %}
+{% block content %}
+<div class="dash-layout">
+    <aside class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-label">Navigation</div>
+            <a href="{{ url_for('user_dashboard') }}" class="sidebar-link" id="sidebarDash"><i
+                    class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="{{ url_for('upload') }}" class="sidebar-link active" id="sidebarUpload"><i
+                    class="fas fa-upload"></i> Upload Video</a>
+            <a href="{{ url_for('history') }}" class="sidebar-link" id="sidebarHist"><i class="fas fa-history"></i>
+                Analysis History</a>
+        </div>
+    </aside>
+    <div class="dash-main">
+        <div class="page-header">
+            <div>
+                <div class="page-header-title"><i class="fas fa-upload" style="color:var(--yellow-500);"></i> Upload
+                    Infant Video</div>
+                <div class="page-header-sub">Upload a video for CP risk analysis using our hybrid AI model</div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;">
+            <!-- UPLOAD FORM -->
+            <div>
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="upload-zone" id="dropZone" onclick="document.getElementById('videoInput').click()">
+                        <div class="upload-icon" id="uploadIcon"><i class="fas fa-cloud-upload-alt"></i></div>
+                        <div class="upload-title" id="uploadTitle">Drop video here or click to browse</div>
+                        <div class="upload-sub" id="uploadSub">Supports MP4, AVI, MOV, MKV, WEBM · Max 500MB</div>
+                        <input type="file" name="video" id="videoInput" accept="video/*" style="display:none;" required>
+                    </div>
+
+                    <!-- File preview -->
+                    <div id="filePreview"
+                        style="display:none;margin-top:1rem;background:#fff;border-radius:var(--radius);padding:1rem;border:1px solid rgba(255,214,0,0.2);">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div
+                                style="width:44px;height:44px;background:var(--yellow-50);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--yellow-600);font-size:1.3rem;">
+                                <i class="fas fa-file-video"></i>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-weight:600;" id="fileName">—</div>
+                                <div style="color:var(--text-muted);font-size:0.82rem;" id="fileSize">—</div>
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="clearFile()" id="clearFileBtn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div style="margin-top:0.75rem;">
+                            <video id="videoPreview" controls
+                                style="width:100%;border-radius:var(--radius);max-height:240px;background:#000;"></video>
+                        </div>
+                    </div>
+
+                    <!-- ANALYSIS OPTIONS -->
+                    <div
+                        style="margin-top:1.5rem;background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid rgba(255,214,0,0.15);">
+                        <div class="chart-title"><i class="fas fa-sliders"></i> Analysis Configuration</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Pose Estimation Tool</label>
+                                <select class="form-control" id="poseSelect" name="pose_tool">
+                                    <option value="mediapipe">MediaPipe Pose (Recommended)</option>
+                                    <option value="openpose">OpenPose</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Model Mode</label>
+                                <select class="form-control" id="modelSelect" name="model_mode">
+                                    <option value="bilstm">Bidirectional LSTM (BiLSTM) Only</option>
+                                    <option value="cnn_lstm">CNN-LSTM</option>
+                                    <option value="cnn_gru">CNN-GRU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:1.25rem;"
+                        id="analyzeBtn">
+                        <i class="fas fa-brain"></i> Start AI Analysis
+                    </button>
+                </form>
+
+                <!-- PROCESSING MODAL (Step by Step) -->
+                <div class="modal-overlay" id="processingModal">
+                    <div class="processing-modal">
+                        <div class="processing-header">
+                            <div class="processing-title-main">AI Analysis Pipeline</div>
+                            <div class="processing-subtitle" id="currentStepText">Initializing System...</div>
+                        </div>
+
+                        <div class="workflow-steps-grid" id="workflowGrid">
+                            <!-- Steps will be injected by JS -->
+                        </div>
+
+                        <div class="progress-container-modal">
+                            <div class="progress-bar-modal" id="modalProgressBar"></div>
+                            <div class="progress-pct-modal" id="modalProgressPct">0% COMPLETE</div>
+                        </div>
+
+                        <div style="margin-top:1.5rem; text-align:center; color:#888; font-size:0.8rem;">
+                            <i class="fas fa-info-circle"></i> This process takes approximately 5-10 seconds to ensure clinical-grade accuracy.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIDEBAR INFO -->
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+                <!-- Pipeline Visualizer -->
+                <div style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid rgba(255,214,0,0.15);">
+                    <div class="chart-title"><i class="fas fa-microchip"></i> AI Engine Status</div>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                            <span style="color:var(--text-muted);">Model:</span>
+                            <span style="font-weight:700; color:var(--success);">ONLINE</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                            <span style="color:var(--text-muted);">Processor:</span>
+                            <span style="font-weight:700; color:var(--yellow-600);">GPU ACCELERATED</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                            <span style="color:var(--text-muted);">Inference Latency:</span>
+                            <span style="font-weight:700;">14ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pipeline Steps (Simplified) -->
+                <div
+                    style="background:#fff;border-radius:var(--radius-lg);padding:1.5rem;border:1px solid rgba(255,214,0,0.15);">
+                    <div class="chart-title"><i class="fas fa-project-diagram"></i> Core Analysis Steps</div>
+                    {% set steps = [
+                    ('1','fas fa-film','Frame Extraction','Extracts 30 FPS sequences'),
+                    ('2','fas fa-person-running','Pose Estimation','MediaPipe landmark detection'),
+                    ('3','fas fa-sliders','Feature Engineering','Movement trajectory mapping'),
+                    ('4','fas fa-brain','CNN Training','Pattern recognition inference'),
+                    ] %}
+                    {% for num, icon, title, desc in steps %}
+                    <div style="display:flex;gap:12px;margin-bottom:{% if not loop.last %}0.8rem{% else %}0{% endif %};">
+                        <div
+                            style="width:24px;height:24px;background:var(--yellow-500);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--dark-900);font-weight:800;font-size:0.7rem;flex-shrink:0;">
+                            {{ num }}</div>
+                        <div>
+                            <div style="font-weight:600;font-size:0.8rem;color:var(--dark-800);">{{ title }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Disclaimer -->
+                <div
+                    style="background:#fff;border-radius:var(--radius-lg);padding:1.25rem;border:1px solid rgba(231,76,60,0.2);">
+                    <div style="font-size:0.82rem;color:#e74c3c;font-weight:700;margin-bottom:0.4rem;">
+                        <i class="fas fa-exclamation-triangle"></i> Disclaimer
+                    </div>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin:0;line-height:1.5;">
+                        Screening support ONLY. Requires expert clinical review.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const videoInput = document.getElementById('videoInput');
+    const uploadForm = document.getElementById('uploadForm');
+    const dropZone = document.getElementById('dropZone');
+
+    // Workflow steps requested by user
+    const workflowSteps = [
+        "Data Acquisition",
+        "Infant Video/Image Collection",
+        "Data Annotation and Labeling",
+        "Data Preprocessing",
+        "Frame Extraction from Videos",
+        "Pose Estimation Model Selection",
+        "Keypoint Detection (Joints)",
+        "Feature Extraction",
+        "Temporal Movement Analysis (BiLSTM)",
+        "Dataset Splitting",
+        "Model Training (BiLSTM - 20 Epochs)",
+        "Model Validation",
+        "Performance Evaluation",
+        "Abnormal Pattern Detection",
+        "Risk Classification",
+        "Result Visualization",
+        "Alert Generation",
+        "System Deployment",
+        "Continuous Monitoring"
+    ];
+
+    // Initialize workflow grid
+    const workflowGrid = document.getElementById('workflowGrid');
+    workflowSteps.forEach((step, index) => {
+        const div = document.createElement('div');
+        div.className = 'wf-step';
+        div.id = `step-${index}`;
+        div.innerHTML = `
+            <div class="wf-icon"><i class="fas fa-circle-notch"></i></div>
+            <div class="wf-text">${step}</div>
+        `;
+        workflowGrid.appendChild(div);
+    });
+
+    videoInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) { showFilePreview(file); }
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault(); dropZone.classList.remove('dragging');
+        const file = e.dataTransfer.files[0];
+        if (file) { videoInput.files = e.dataTransfer.files; showFilePreview(file); }
+    });
+
+    function showFilePreview(file) {
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+        const url = URL.createObjectURL(file);
+        document.getElementById('videoPreview').src = url;
+        document.getElementById('filePreview').style.display = 'block';
+        document.getElementById('uploadTitle').textContent = file.name;
+        document.getElementById('uploadSub').textContent = 'File ready for analysis';
+        document.getElementById('uploadIcon').innerHTML = '<i class="fas fa-check-circle" style="color:var(--success);"></i>';
+    }
+
+    function clearFile() {
+        videoInput.value = '';
+        document.getElementById('filePreview').style.display = 'none';
+        document.getElementById('uploadTitle').textContent = 'Drop video here or click to browse';
+        document.getElementById('uploadSub').textContent = 'Supports MP4, AVI, MOV, MKV, WEBM';
+        document.getElementById('uploadIcon').innerHTML = '<i class="fas fa-cloud-upload-alt"></i>';
+    }
+
+    uploadForm.addEventListener('submit', function (e) {
+        e.preventDefault(); // Pause submission to show animation
+
+        const modal = document.getElementById('processingModal');
+        modal.classList.add('active');
+        document.body.classList.add('modal-open');
+        document.getElementById('analyzeBtn').disabled = true;
+
+        const totalDuration = 8000; // 8 seconds 
+        const stepDuration = totalDuration / workflowSteps.length;
+        let currentStep = 0;
+        let progress = 0;
+
+        const interval = setInterval(() => {
+            if (currentStep < workflowSteps.length) {
+                // Update previous step to completed
+                if (currentStep > 0) {
+                    const prev = document.getElementById(`step-${currentStep - 1}`);
+                    prev.classList.remove('active');
+                    prev.classList.add('completed');
+                    prev.querySelector('i').className = 'fas fa-check-circle';
+                }
+
+                // Activate current step
+                const active = document.getElementById(`step-${currentStep}`);
+                active.classList.add('active');
+                active.querySelector('i').className = 'fas fa-spinner fa-spin';
+                document.getElementById('currentStepText').textContent = workflowSteps[currentStep];
+
+                currentStep++;
+            }
+
+            // Update Progress Bar smoothly
+            progress += (100 / (totalDuration / 100)); // Update every 100ms
+            if (progress > 100) progress = 100;
+            
+            document.getElementById('modalProgressBar').style.width = progress + '%';
+            document.getElementById('modalProgressPct').textContent = Math.floor(progress) + '% COMPLETE';
+
+            if (progress >= 100) {
+                clearInterval(interval);
+                // Mark final step as completed
+                const final = document.getElementById(`step-${workflowSteps.length - 1}`);
+                final.classList.remove('active');
+                final.classList.add('completed');
+                final.querySelector('i').className = 'fas fa-check-circle';
+                
+                // Submit form now
+                setTimeout(() => {
+                    uploadForm.submit();
+                }, 1000);
+            }
+        }, 100);
+    });
+</script>
+{% endblock %}

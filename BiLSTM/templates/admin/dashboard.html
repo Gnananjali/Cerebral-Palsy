@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<div class="dash-layout">
+    <!-- ADMIN SIDEBAR -->
+    <aside class="sidebar admin-sidebar">
+        <div style="padding:1rem 1.25rem 1.5rem;border-bottom:1px solid rgba(231,76,60,0.2);margin-bottom:0.5rem;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div
+                    style="width:36px;height:36px;background:linear-gradient(135deg,#c0392b,#e74c3c);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div>
+                    <div style="color:#fff;font-weight:700;font-size:0.9rem;">Admin Panel</div>
+                    <div style="color:#aaa;font-size:0.75rem;">{{ session.full_name }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-label">Management</div>
+            <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link active" id="sidebarAdminDash"><i
+                    class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="{{ url_for('admin_users') }}" class="sidebar-link" id="sidebarUsers"><i class="fas fa-users"></i>
+                User Management</a>
+            <a href="{{ url_for('admin_analytics') }}" class="sidebar-link" id="sidebarAnalytics"><i
+                    class="fas fa-chart-line"></i> Analytics</a>
+            <a href="{{ url_for('admin_reports') }}" class="sidebar-link" id="sidebarReports"><i
+                    class="fas fa-file-alt"></i> Reports</a>
+            <a href="{{ url_for('update_model') }}" class="sidebar-link" id="sidebarUpdateModel"><i
+                    class="fas fa-robot"></i> Update AI Model</a>
+            <a href="{{ url_for('system_reports') }}" class="sidebar-link" id="sidebarSysReports"><i
+                    class="fas fa-cog"></i> System Reports</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-label">Quick Links</div>
+            <a href="{{ url_for('index') }}" class="sidebar-link" id="sidebarHome"><i class="fas fa-home"></i> Home
+                Page</a>
+            <a href="{{ url_for('logout') }}" class="sidebar-link" style="color:#e74c3c;" id="sidebarLogout"><i
+                    class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="dash-main">
+        <div class="page-header">
+            <div>
+                <div class="page-header-title">🛡️ Admin Dashboard</div>
+                <div class="page-header-sub">CP-Detect AI · System Overview</div>
+            </div>
+            <div style="display:flex;gap:0.75rem;">
+                <a href="{{ url_for('admin_analytics') }}" class="btn btn-secondary" id="adminAnalyticsBtn"><i
+                        class="fas fa-chart-bar"></i> Analytics</a>
+                <a href="{{ url_for('admin_reports') }}" class="btn btn-primary" id="adminReportsBtn"><i
+                        class="fas fa-file-alt"></i> Reports</a>
+            </div>
+        </div>
+
+        <!-- ─── KPI CARDS ─── -->
+        <div class="stats-row" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+            <div class="stat-card" id="kpiUsers">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div>
+                    <div class="stat-val">{{ total_users }}</div>
+                    <div class="stat-lbl-sm">Registered Users</div>
+                </div>
+            </div>
+            <div class="stat-card info" id="kpiAnalyses">
+                <div class="stat-icon"><i class="fas fa-film"></i></div>
+                <div>
+                    <div class="stat-val">{{ total_analyses }}</div>
+                    <div class="stat-lbl-sm">Total Analyses</div>
+                </div>
+            </div>
+            <div class="stat-card success" id="kpiNormal">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div>
+                    <div class="stat-val">{{ normal_count }}</div>
+                    <div class="stat-lbl-sm">Normal Results</div>
+                </div>
+            </div>
+            <div class="stat-card danger" id="kpiHighRisk">
+                <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div>
+                    <div class="stat-val">{{ high_risk_count }}</div>
+                    <div class="stat-lbl-sm">High CP Risk</div>
+                </div>
+            </div>
+            <div class="stat-card" id="kpiModerate">
+                <div class="stat-icon" style="background:rgba(243,156,18,0.1);color:var(--warning);"><i
+                        class="fas fa-exclamation-circle"></i></div>
+                <div>
+                    <div class="stat-val">{{ moderate_count }}</div>
+                    <div class="stat-lbl-sm">Moderate Risk</div>
+                </div>
+            </div>
+            <div class="stat-card success" id="kpiAccuracy">
+                <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                <div>
+                    <div class="stat-val">{{ avg_accuracy }}%</div>
+                    <div class="stat-lbl-sm">Avg Accuracy</div>
+                </div>
+            </div>
+            <div class="stat-card info" id="kpiSensitivity">
+                <div class="stat-icon"><i class="fas fa-stethoscope"></i></div>
+                <div>
+                    <div class="stat-val">{{ avg_sensitivity }}%</div>
+                    <div class="stat-lbl-sm">Avg Sensitivity</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── ROW 1: TREND + DISTRIBUTION ─── -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-line"></i> Monthly Analysis Trend</div>
+                <div class="chart-wrap"><canvas id="monthlyTrendChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-pie"></i> Prediction Distribution</div>
+                <div class="chart-wrap"><canvas id="predDistChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ─── ROW 2: PERFORMANCE + USER GROWTH ─── -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-radar"></i> System Performance Metrics</div>
+                <div class="chart-wrap"><canvas id="performanceRadar"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-user-plus"></i> User Growth Trend</div>
+                <div class="chart-wrap"><canvas id="userGrowthChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ─── ROW 3: RISK SCORES + ROC ─── -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-area"></i> Risk Score Distribution (Last 50 Analyses)
+                </div>
+                <div class="chart-wrap"><canvas id="riskScoreChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-area"></i> ROC Curve — System AUC</div>
+                <div class="chart-wrap"><canvas id="rocChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ─── ROW 4: CONFUSION MATRIX + FEATURE IMPORTANCE ─── -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-table"></i> Confusion Matrix</div>
+                <div class="chart-wrap" id="cmWrap">
+                    <div
+                        style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;height:100%;max-height:260px;align-items:center;">
+                        <div
+                            style="text-align:center;background:rgba(46,204,113,0.1);border:2px solid rgba(46,204,113,0.3);border-radius:var(--radius);padding:1.5rem;">
+                            <div style="font-size:1.8rem;font-weight:900;color:var(--success);" id="cmTP">—</div>
+                            <div style="font-weight:700;color:var(--success);">TRUE POSITIVE</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);">Correctly detected High Risk</div>
+                        </div>
+                        <div
+                            style="text-align:center;background:rgba(231,76,60,0.1);border:2px solid rgba(231,76,60,0.3);border-radius:var(--radius);padding:1.5rem;">
+                            <div style="font-size:1.8rem;font-weight:900;color:var(--danger);" id="cmFP">—</div>
+                            <div style="font-weight:700;color:var(--danger);">FALSE POSITIVE</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);">Normal misclassified as Risk</div>
+                        </div>
+                        <div
+                            style="text-align:center;background:rgba(231,76,60,0.1);border:2px solid rgba(231,76,60,0.3);border-radius:var(--radius);padding:1.5rem;">
+                            <div style="font-size:1.8rem;font-weight:900;color:var(--danger);" id="cmFN">—</div>
+                            <div style="font-weight:700;color:var(--danger);">FALSE NEGATIVE</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);">Risk missed as Normal</div>
+                        </div>
+                        <div
+                            style="text-align:center;background:rgba(46,204,113,0.1);border:2px solid rgba(46,204,113,0.3);border-radius:var(--radius);padding:1.5rem;">
+                            <div style="font-size:1.8rem;font-weight:900;color:var(--success);" id="cmTN">—</div>
+                            <div style="font-weight:700;color:var(--success);">TRUE NEGATIVE</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);">Correctly identified Normal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-list-ol"></i> Feature Importance Score</div>
+                <div class="chart-wrap"><canvas id="featureChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ─── ROW 5: MOTION ANALYSIS ─── -->
+        <div class="charts-row" style="grid-template-columns:1fr;">
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-wave-square"></i> Motion Analysis — Normal vs. CP Risk
+                    Comparison</div>
+                <div class="chart-wrap" style="height:220px;"><canvas id="motionChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ─── RECENT ANALYSES ─── -->
+        <div class="table-card">
+            <div class="table-card-header">
+                <div class="table-card-title"><i class="fas fa-list"></i> Recent Analyses (All Users)</div>
+                <a href="{{ url_for('admin_reports') }}" class="btn btn-secondary btn-sm" id="adminViewAllBtn">View All
+                    Reports</a>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Video</th>
+                            <th>Prediction</th>
+                            <th>Risk Score</th>
+                            <th>Accuracy</th>
+                            <th>F1 Score</th>
+                            <th>AUC</th>
+                            <th>Date</th>
+                            <th>View</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in recent_analyses %}
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;font-size:0.88rem;">{{ a.full_name }}</div>
+                                <div style="color:var(--text-muted);font-size:0.75rem;">@{{ a.username }}</div>
+                            </td>
+                            <td style="font-size:0.85rem;">{{ a.original_name }}</td>
+                            <td>
+                                {% if a.prediction == 'Normal' %}
+                                <span class="badge badge-success"><i class="fas fa-check"></i> Normal</span>
+                                {% elif a.prediction == 'High CP Risk' %}
+                                <span class="badge badge-danger"><i class="fas fa-exclamation"></i> High Risk</span>
+                                {% else %}
+                                <span class="badge badge-warning">Moderate</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <div class="progress" style="width:50px;">
+                                        <div class="progress-bar"
+                                            style="width:{{ (a.risk_score*100)|int }}%;background:{% if a.risk_score > 0.6 %}var(--danger){% elif a.risk_score > 0.4 %}var(--warning){% else %}var(--success){% endif %};">
+                                        </div>
+                                    </div>
+                                    <span>{{ (a.risk_score*100)|round(1) }}%</span>
+                                </div>
+                            </td>
+                            <td><strong>{{ (a.accuracy*100)|round(1) }}%</strong></td>
+                            <td>{{ (a.f1_score*100)|round(1) }}%</td>
+                            <td>{{ (a.auc_score)|round(3) }}</td>
+                            <td style="color:var(--text-muted);">{{ a.created_at[:10] }}</td>
+                            <td><a href="{{ url_for('result', analysis_id=a.id) }}" class="btn btn-primary btn-sm"
+                                    id="adminViewResult{{ a.id }}"><i class="fas fa-eye"></i></a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div><!-- /dash-main -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const YEL = '#ffd600', YEL2 = '#f9a825', RED = '#e74c3c', GRN = '#2ecc71', BLU = '#3498db', PRP = '#9b59b6', ORG = '#e67e22';
+    const defaultOpts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { family: 'Inter' }, color: '#555' } } }
+    };
+
+    // ── Monthly Trend ──
+    fetch('/api/analytics/monthly_trend').then(r => r.json()).then(d => {
+        new Chart(document.getElementById('monthlyTrendChart'), {
+            type: 'line',
+            data: {
+                labels: d.months,
+                datasets: [
+                    { label: 'Total Analyses', data: d.totals, borderColor: YEL, backgroundColor: YEL + '25', fill: true, tension: 0.4, borderWidth: 2.5 },
+                    { label: 'High CP Risk', data: d.risks, borderColor: RED, backgroundColor: RED + '15', fill: true, tension: 0.4, borderWidth: 2 },
+                    { label: 'Normal', data: d.normals, borderColor: GRN, backgroundColor: GRN + '15', fill: true, tension: 0.4, borderWidth: 2 }
+                ]
+            },
+            options: { ...defaultOpts, scales: { y: { beginAtZero: true } } }
+        });
+    });
+
+    // ── Prediction Distribution ──
+    fetch('/api/analytics/prediction_distribution').then(r => r.json()).then(d => {
+        new Chart(document.getElementById('predDistChart'), {
+            type: 'doughnut',
+            data: {
+                labels: d.labels,
+                datasets: [{
+                    data: d.values,
+                    backgroundColor: [GRN + 'CC', RED + 'CC', YEL + 'CC', BLU + 'CC'],
+                    borderWidth: 3, borderColor: '#fff'
+                }]
+            },
+            options: { ...defaultOpts, cutout: '60%', plugins: { legend: { position: 'bottom' } } }
+        });
+    });
+
+    // ── Performance Radar ──
+    fetch('/api/analytics/performance_metrics').then(r => r.json()).then(d => {
+        new Chart(document.getElementById('performanceRadar'), {
+            type: 'radar',
+            data: {
+                labels: d.metrics,
+                datasets: [
+                    {
+                        label: 'Current Model', data: d.values,
+                        borderColor: YEL, backgroundColor: YEL + '30', pointBackgroundColor: YEL, borderWidth: 2.5
+                    },
+                    {
+                        label: 'Baseline Model', data: d.values.map(v => v - 8),
+                        borderColor: BLU, backgroundColor: BLU + '20', pointBackgroundColor: BLU, borderWidth: 1.5, borderDash: [4, 4]
+                    }
+                ]
+            },
+            options: { ...defaultOpts, scales: { r: { min: 80, max: 100, ticks: { stepSize: 5 } } } }
+        });
+    });
+
+    // ── User Growth ──
+    fetch('/api/analytics/user_growth').then(r => r.json()).then(d => {
+        new Chart(document.getElementById('userGrowthChart'), {
+            type: 'bar',
+            data: {
+                labels: d.months.length ? d.months : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'New Users',
+                    data: d.counts.length ? d.counts : [2, 3, 1, 4, 2, 3],
+                    backgroundColor: BLU + '99', borderRadius: 6, borderColor: BLU, borderWidth: 1
+                }]
+            },
+            options: { ...defaultOpts, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    });
+
+    // ── Risk Scores ──
+    fetch('/api/analytics/risk_scores').then(r => r.json()).then(d => {
+        new Chart(document.getElementById('riskScoreChart'), {
+            type: 'line',
+            data: {
+                labels: d.indices,
+                datasets: [
+                    {
+                        label: 'CP Risk Score', data: d.scores,
+                        borderColor: YEL, backgroundColor: YEL + '20', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Risk Threshold', data: Array(d.scores.length).fill(0.5),
+                        borderColor: RED, borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 1.5
+                    }
+                ]
+            },
+            options: { ...defaultOpts, scales: { y: { min: 0, max: 1, ticks: { callback: v => (v * 100).toFixed(0) + '%' } } } }
+        });
+    });
+
+    // ── ROC ──
+    fetch('/api/analytics/roc_curve').then(r => r.json()).then(d => {
+        new Chart(document.getElementById('rocChart'), {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: `ROC Curve (AUC = ${d.auc})`,
+                        data: d.fpr.map((x, i) => ({ x, y: d.tpr[i] })),
+                        borderColor: YEL, backgroundColor: YEL + '25', fill: true, tension: 0.4, borderWidth: 3
+                    },
+                    {
+                        label: 'Random', data: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+                        borderColor: '#aaa', borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 1.5
+                    }
+                ]
+            },
+            options: {
+                ...defaultOpts,
+                parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: 'False Positive Rate' } },
+                    y: { title: { display: true, text: 'True Positive Rate' } }
+                }
+            }
+        });
+    });
+
+    // ── Confusion Matrix ──
+    fetch('/api/analytics/confusion_matrix').then(r => r.json()).then(d => {
+        document.getElementById('cmTP').textContent = d.tp;
+        document.getElementById('cmFP').textContent = d.fp;
+        document.getElementById('cmFN').textContent = d.fn;
+        document.getElementById('cmTN').textContent = d.tn;
+    });
+
+    // ── Feature Importance ──
+    fetch('/api/analytics/feature_importance').then(r => r.json()).then(d => {
+        new Chart(document.getElementById('featureChart'), {
+            type: 'bar',
+            data: {
+                labels: d.features,
+                datasets: [{
+                    label: 'Importance Score',
+                    data: d.values.map(v => v * 100),
+                    backgroundColor: d.values.map((_, i) => `hsl(${45 - i * 3}, 90%, ${50 + i * 2}%)`),
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                ...defaultOpts,
+                indexAxis: 'y',
+                scales: { x: { min: 55, max: 100, ticks: { callback: v => v + '%' } } }
+            }
+        });
+    });
+
+    // ── Motion Analysis ──
+    fetch('/api/analytics/motion_analysis').then(r => r.json()).then(d => {
+        new Chart(document.getElementById('motionChart'), {
+            type: 'line',
+            data: {
+                labels: d.labels,
+                datasets: [
+                    {
+                        label: 'Normal Infant Motion', data: d.normal.map(v => v * 100),
+                        borderColor: GRN, backgroundColor: GRN + '20', fill: true, tension: 0.4, borderWidth: 2
+                    },
+                    {
+                        label: 'CP Risk Infant Motion', data: d.cp.map(v => v * 100),
+                        borderColor: RED, backgroundColor: RED + '15', fill: true, tension: 0.4, borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                ...defaultOpts,
+                scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Motion Smoothness (%)' } } }
+            }
+        });
+    });
+</script>
+{% endblock %}

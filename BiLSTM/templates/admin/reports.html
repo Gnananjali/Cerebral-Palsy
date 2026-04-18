@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="dash-layout">
+    <aside class="sidebar admin-sidebar">
+        <div style="padding:1rem 1.25rem 1.5rem;border-bottom:1px solid rgba(231,76,60,0.2);margin-bottom:0.5rem;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div
+                    style="width:36px;height:36px;background:linear-gradient(135deg,#c0392b,#e74c3c);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;">
+                    <i class="fas fa-shield-alt"></i></div>
+                <div>
+                    <div style="color:#fff;font-weight:700;font-size:0.9rem;">Admin Panel</div>
+                    <div style="color:#aaa;font-size:0.75rem;">{{ session.full_name }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-label">Management</div>
+            <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link" id="sidebarDash"><i
+                    class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="{{ url_for('admin_users') }}" class="sidebar-link" id="sidebarUsers"><i class="fas fa-users"></i>
+                User Management</a>
+            <a href="{{ url_for('admin_analytics') }}" class="sidebar-link" id="sidebarAnalytics"><i
+                    class="fas fa-chart-line"></i> Analytics</a>
+            <a href="{{ url_for('admin_reports') }}" class="sidebar-link active" id="sidebarReports"><i
+                    class="fas fa-file-alt"></i> Reports</a>
+            <a href="{{ url_for('update_model') }}" class="sidebar-link" id="sidebarUpdateModel"><i
+                    class="fas fa-robot"></i> Update AI Model</a>
+            <a href="{{ url_for('system_reports') }}" class="sidebar-link" id="sidebarSysReports"><i
+                    class="fas fa-cog"></i> System Reports</a>
+        </div>
+        <div class="sidebar-section">
+            <a href="{{ url_for('index') }}" class="sidebar-link" id="sidebarHome"><i class="fas fa-home"></i> Home</a>
+            <a href="{{ url_for('logout') }}" class="sidebar-link" style="color:#e74c3c;" id="sidebarLogout"><i
+                    class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </aside>
+
+    <div class="dash-main">
+        <div class="page-header">
+            <div>
+                <div class="page-header-title"><i class="fas fa-file-alt" style="color:var(--yellow-500);"></i> Analysis
+                    Reports</div>
+                <div class="page-header-sub">All patient analysis records with performance metrics</div>
+            </div>
+            <button onclick="window.print()" class="btn btn-primary" id="printReportBtn">
+                <i class="fas fa-print"></i> Print Report
+            </button>
+        </div>
+
+        <!-- SUMMARY CARDS -->
+        <div class="stats-row" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+            <div class="stat-card" id="rptTotalCard">
+                <div class="stat-icon"><i class="fas fa-film"></i></div>
+                <div>
+                    <div class="stat-val">{{ total }}</div>
+                    <div class="stat-lbl-sm">Total Analyses</div>
+                </div>
+            </div>
+            <div class="stat-card success" id="rptNormalCard">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div>
+                    <div class="stat-val">{{ normal }}</div>
+                    <div class="stat-lbl-sm">Normal</div>
+                </div>
+            </div>
+            <div class="stat-card danger" id="rptHighCard">
+                <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div>
+                    <div class="stat-val">{{ high_risk }}</div>
+                    <div class="stat-lbl-sm">High CP Risk</div>
+                </div>
+            </div>
+            <div class="stat-card info" id="rptAccCard">
+                <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                <div>
+                    <div class="stat-val">{{ avg_acc }}%</div>
+                    <div class="stat-lbl-sm">Avg Accuracy</div>
+                </div>
+            </div>
+            <div class="stat-card" id="rptDetectionCard">
+                <div class="stat-icon" style="background:rgba(243,156,18,0.1);color:var(--warning);"><i
+                        class="fas fa-percent"></i></div>
+                <div>
+                    <div class="stat-val">{{ ((high_risk / total * 100)|round(1)) if total > 0 else 0 }}%</div>
+                    <div class="stat-lbl-sm">Detection Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPORT CHARTS -->
+        <div class="charts-row">
+            <!-- CLASSIFICATION LINE GRAPH -->
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-line"></i> Classification Results — Line Graph</div>
+                <div class="chart-wrap"><canvas id="rptClassLine"></canvas></div>
+            </div>
+            <!-- ACCURACY BAR BY USER (top 8) -->
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-bar"></i> Accuracy by Analysis — Last 20</div>
+                <div class="chart-wrap"><canvas id="rptAccBar"></canvas></div>
+            </div>
+        </div>
+
+        <div class="charts-row">
+            <!-- RISK SCORE LINE -->
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-area"></i> CP Risk Score — All Analyses (Line)</div>
+                <div class="chart-wrap"><canvas id="rptRiskLine"></canvas></div>
+            </div>
+            <!-- METRICS GROUPED BAR -->
+            <div class="chart-card">
+                <div class="chart-title"><i class="fas fa-chart-bar"></i> Multi-Metric Performance — Last 10 Analyses
+                </div>
+                <div class="chart-wrap"><canvas id="rptMultiMetric"></canvas></div>
+            </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div
+            style="background:#fff;border-radius:var(--radius);padding:0.75rem 1rem;border:1px solid rgba(255,214,0,0.2);margin-bottom:1rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+            <i class="fas fa-filter" style="color:#bbb;"></i>
+            <input type="text" id="rptSearch" placeholder="Search by user or filename..." class="form-control"
+                style="border:none;background:transparent;padding:0;box-shadow:none;flex:1;min-width:200px;">
+            <select id="rptFilterPred" class="form-control" style="width:auto;padding:4px 12px;font-size:0.85rem;">
+                <option value="">All Predictions</option>
+                <option value="Normal">Normal</option>
+                <option value="High CP Risk">High CP Risk</option>
+                <option value="Moderate Risk">Moderate Risk</option>
+            </select>
+        </div>
+
+        <!-- ALL ANALYSES TABLE -->
+        <div class="table-card" id="rptTableCard">
+            <div class="table-card-header">
+                <div class="table-card-title"><i class="fas fa-list"></i> All Analysis Records</div>
+                <span style="color:var(--text-muted);font-size:0.85rem;" id="rptRowCount">{{ analyses|length }}
+                    records</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>User</th>
+                            <th>Video</th>
+                            <th>Prediction</th>
+                            <th>Risk</th>
+                            <th>Accuracy</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>F1</th>
+                            <th>AUC</th>
+                            <th>Sensitivity</th>
+                            <th>Date</th>
+                            <th>View</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in analyses %}
+                        <tr class="rpt-row" data-user="{{ a.full_name }}" data-file="{{ a.original_name }}"
+                            data-pred="{{ a.prediction }}">
+                            <td style="color:var(--text-muted);font-size:0.78rem;">{{ loop.index }}</td>
+                            <td>
+                                <div style="font-weight:600;font-size:0.85rem;">{{ a.full_name }}</div>
+                                <div style="color:var(--text-muted);font-size:0.75rem;">@{{ a.username }}</div>
+                            </td>
+                            <td
+                                style="font-size:0.82rem;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                {{ a.original_name }}</td>
+                            <td>
+                                {% if a.prediction == 'Normal' %}
+                                <span class="badge badge-success"><i class="fas fa-check"></i> Normal</span>
+                                {% elif a.prediction == 'High CP Risk' %}
+                                <span class="badge badge-danger"><i class="fas fa-exclamation"></i> High Risk</span>
+                                {% else %}
+                                <span class="badge badge-warning">Moderate</span>
+                                {% endif %}
+                            </td>
+                            <td
+                                style="font-size:0.82rem;font-weight:600;color:{% if a.risk_score > 0.6 %}var(--danger){% elif a.risk_score > 0.4 %}var(--warning){% else %}var(--success){% endif %};">
+                                {{ (a.risk_score*100)|round(1) }}%
+                            </td>
+                            <td><strong>{{ (a.accuracy*100)|round(1) }}%</strong></td>
+                            <td>{{ (a.precision_score*100)|round(1) }}%</td>
+                            <td>{{ (a.recall*100)|round(1) }}%</td>
+                            <td>{{ (a.f1_score*100)|round(1) }}%</td>
+                            <td>{{ a.auc_score|round(3) }}</td>
+                            <td>{{ (a.sensitivity*100)|round(1) }}%</td>
+                            <td style="color:var(--text-muted);font-size:0.78rem;white-space:nowrap;">{{
+                                a.created_at[:10] }}</td>
+                            <td><a href="{{ url_for('result', analysis_id=a.id) }}" class="btn btn-primary btn-sm"
+                                    id="rptView{{ a.id }}"><i class="fas fa-eye"></i></a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const YEL = '#ffd600', RED = '#e74c3c', GRN = '#2ecc71', BLU = '#3498db', PRP = '#9b59b6', ORG = '#e67e22';
+    const baseOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { family: 'Inter' }, color: '#555' } } } };
+
+    // Build arrays from analyses
+    const analyses = {{ analyses| tojson }};
+    const last20 = analyses.slice(0, 20);
+    const last10 = analyses.slice(0, 10);
+
+    // ── Classification Line Graph ──
+    new Chart(document.getElementById('rptClassLine'), {
+        type: 'line',
+        data: {
+            labels: last20.map((_, i) => 'A' + (i + 1)),
+            datasets: [
+                {
+                    label: 'Normal (0)', data: last20.map(a => a.prediction === 'Normal' ? 0 : null),
+                    borderColor: GRN, backgroundColor: GRN + '20', pointRadius: 7, pointHoverRadius: 10,
+                    showLine: false, fill: false
+                },
+                {
+                    label: 'High Risk (1)', data: last20.map(a => a.prediction === 'High CP Risk' ? 1 : null),
+                    borderColor: RED, backgroundColor: RED + '20', pointRadius: 7, pointHoverRadius: 10,
+                    showLine: false, fill: false
+                },
+                {
+                    label: 'Moderate (0.5)', data: last20.map(a => a.prediction === 'Moderate Risk' ? 0.5 : null),
+                    borderColor: YEL, backgroundColor: YEL + '20', pointRadius: 7, pointHoverRadius: 10,
+                    showLine: false, fill: false
+                }
+            ]
+        },
+        options: { ...baseOpts, scales: { y: { min: -0.2, max: 1.2, ticks: { callback: v => v === 0 ? 'Normal' : v === 0.5 ? 'Moderate' : v === 1 ? 'High Risk' : '' }, stepSize: 0.5 } } }
+    });
+
+    // ── Accuracy Bar ──
+    new Chart(document.getElementById('rptAccBar'), {
+        type: 'bar',
+        data: {
+            labels: last20.map((_, i) => 'A' + (i + 1)),
+            datasets: [{
+                label: 'Accuracy (%)',
+                data: last20.map(a => (a.accuracy * 100).toFixed(1)),
+                backgroundColor: last20.map(a => a.accuracy > 0.92 ? GRN + '99' : a.accuracy > 0.88 ? YEL + '99' : ORG + '99'),
+                borderRadius: 5, borderWidth: 0
+            }]
+        },
+        options: { ...baseOpts, plugins: { legend: { display: false } }, scales: { y: { min: 82, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+
+    // ── Risk Score Line ──
+    const allA = analyses.slice(0, 50);
+    new Chart(document.getElementById('rptRiskLine'), {
+        type: 'line',
+        data: {
+            labels: allA.map((_, i) => '#' + (i + 1)),
+            datasets: [
+                {
+                    label: 'Risk Score', data: allA.map(a => (a.risk_score * 100).toFixed(1)),
+                    borderColor: YEL, backgroundColor: YEL + '20', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3, pointHoverRadius: 6
+                },
+                {
+                    label: 'Risk Threshold', data: Array(allA.length).fill(50),
+                    borderColor: RED, borderDash: [5, 5], pointRadius: 0, fill: false, borderWidth: 1.5
+                }
+            ]
+        },
+        options: { ...baseOpts, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+
+    // ── Multi-Metric Bar ──
+    new Chart(document.getElementById('rptMultiMetric'), {
+        type: 'bar',
+        data: {
+            labels: last10.map((_, i) => 'A' + (i + 1)),
+            datasets: [
+                { label: 'Accuracy', data: last10.map(a => (a.accuracy * 100).toFixed(1)), backgroundColor: YEL + '99', borderRadius: 3 },
+                { label: 'F1 Score', data: last10.map(a => (a.f1_score * 100).toFixed(1)), backgroundColor: BLU + '99', borderRadius: 3 },
+                { label: 'Sensitivity', data: last10.map(a => (a.sensitivity * 100).toFixed(1)), backgroundColor: GRN + '99', borderRadius: 3 }
+            ]
+        },
+        options: { ...baseOpts, scales: { y: { min: 80, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+
+    // ── Filter Table ──
+    const searchEl = document.getElementById('rptSearch');
+    const filterEl = document.getElementById('rptFilterPred');
+    const rows = document.querySelectorAll('.rpt-row');
+    const cnt = document.getElementById('rptRowCount');
+    function filterTable() {
+        const q = searchEl.value.toLowerCase();
+        const p = filterEl.value;
+        let vis = 0;
+        rows.forEach(r => {
+            const m = (r.dataset.user.toLowerCase().includes(q) || r.dataset.file.toLowerCase().includes(q))
+                && (!p || r.dataset.pred === p);
+            r.style.display = m ? '' : 'none';
+            if (m) vis++;
+        });
+        cnt.textContent = vis + ' records';
+    }
+    searchEl.addEventListener('input', filterTable);
+    filterEl.addEventListener('change', filterTable);
+</script>
+{% endblock %}

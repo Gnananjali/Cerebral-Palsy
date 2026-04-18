@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+
+# Models
+*.h5
+
+# Videos
+*.mp4
+*.webm
+
+# Database
+*.db
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
