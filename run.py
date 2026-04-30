@@ -44,7 +44,7 @@ os.makedirs('static/reports', exist_ok=True)
 # ──────────────────────────────────────────────
 # DATABASE
 # ──────────────────────────────────────────────
-DATABASE = 'cp_detection.db'
+DATABASE = '/tmp/cp_detection.db'
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -695,5 +695,4 @@ def retrain_model():
 
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5000)
