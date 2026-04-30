@@ -14,6 +14,7 @@ from werkzeug.utils import secure_filename
 import cv2
 
 app = Flask(__name__)
+init_db()
 app.secret_key = 'cp_detection_secret_key_2024'
 
 # Load the model globably for efficiency
