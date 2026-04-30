@@ -12,7 +12,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 import cv2
-import tensorflow as tf
 
 app = Flask(__name__)
 app.secret_key = 'cp_detection_secret_key_2024'
