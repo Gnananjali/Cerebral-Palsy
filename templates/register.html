@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card animate-in">
+        <div class="auth-logo">
+            <div class="brand-icon" style="width:64px;height:64px;font-size:1.8rem;margin:0 auto 0.75rem;">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <div class="auth-title">Create Account</div>
+            <div class="auth-sub">Join the CP-Detect AI Platform</div>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <div class="input-group">
+                    <i class="fas fa-id-card input-icon"></i>
+                    <input type="text" name="full_name" class="form-control" placeholder="Dr. John Smith" required
+                        id="regName">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <div class="input-group">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" name="username" class="form-control" placeholder="Choose username" required
+                        id="regUser">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <div class="input-group">
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" name="email" class="form-control" placeholder="your@email.com" required
+                        id="regEmail">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-group">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" name="password" class="form-control" placeholder="Min 6 characters" required
+                        minlength="6" id="regPass">
+                </div>
+            </div>
+            <div
+                style="background: var(--yellow-50); border: 1px solid rgba(255,214,0,0.3); border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; color: var(--text-secondary);">
+                <i class="fas fa-info-circle" style="color: var(--yellow-600);"></i>
+                This system is for clinical screening support only. Not for self-diagnosis. Professional medical advice
+                required.
+            </div>
+            <button type="submit" class="btn-submit" id="regBtn">
+                <i class="fas fa-user-plus"></i> Create Account
+            </button>
+        </form>
+        <div class="auth-footer">
+            Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

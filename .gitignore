@@ -1,4 +1,22 @@
-# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ML models
+*.h5
+
+# uploads
+uploads/
+static/uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# database
+*.db# Python
 __pycache__/
 *.pyc
 

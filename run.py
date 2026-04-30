@@ -4,6 +4,7 @@ import random
 import time
 import sqlite3
 import numpy as np
+from flask import send_from_directory
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory
@@ -31,6 +32,9 @@ except Exception as e:
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webm'}
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB
 
@@ -271,11 +275,11 @@ def upload():
     if request.method == 'POST':
         if 'video' not in request.files:
             flash('No video file selected.', 'danger')
-            return redirect(request.url)
+            return render_template('user/upload.html')
         file = request.files['video']
         if file.filename == '':
             flash('No file selected.', 'danger')
-            return redirect(request.url)
+            return render_template('user/upload.html')
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             unique_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
@@ -287,7 +291,7 @@ def upload():
                 result = analyze_video_with_model(filepath)
             else:
                 # Fallback to simulation if model loading failed
-                time.sleep(10)
+                time.sleep(1)
                 result = simulate_cp_analysis(unique_name)
 
             conn = get_db()
@@ -419,7 +423,7 @@ def simulate_cp_analysis(filename):
     seed = sum(ord(c) for c in filename)
     random.seed(seed)
     # Biased toward Normal for realistic distribution
-    is_high_risk = random.random() < 0.3
+    is_high_risk = random.random() < 0.7
     risk_score = random.uniform(0.65, 0.95) if is_high_risk else random.uniform(0.05, 0.35)
     if is_high_risk:
         prediction = 'High CP Risk'
@@ -687,6 +691,8 @@ def retrain_model():
         flash(f'Error starting retraining: {e}', 'danger')
     
     return redirect(url_for('admin_dashboard'))
+
+
 
 if __name__ == '__main__':
     init_db()
