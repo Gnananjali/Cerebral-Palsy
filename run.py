@@ -14,21 +14,13 @@ from werkzeug.utils import secure_filename
 import cv2
 
 app = Flask(__name__)
-init_db()
+
 app.secret_key = 'cp_detection_secret_key_2024'
 
 # Load the model globably for efficiency
 MODEL_PATH = 'cp_prediction_model.h5'
 model = None
-try:
-    if os.path.exists(MODEL_PATH):
-        model = tf.keras.models.load_model(MODEL_PATH)
-        print("--- SUCCESS: CP Prediction Model Loaded ---")
-    else:
-        print("--- WARNING: Model file not found. Simulation mode will be used. ---")
-except Exception as e:
-    print(f"--- ERROR: Could not load model: {e} ---")
-
+print("Simulation mode running")
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webm'}
@@ -155,6 +147,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+init_db() 
 
 # ──────────────────────────────────────────────
 # AUTH DECORATORS
@@ -541,7 +534,7 @@ def update_model():
             
             # Re-load the model
             try:
-                model = tf.keras.models.load_model(MODEL_PATH)
+                model = None
                 flash('Model updated and reloaded successfully!', 'success')
                 
                 # Log the event
